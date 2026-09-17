@@ -24,28 +24,28 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
 
-      - name: Build with Gradle
+      - name: Show SDK
         run: |
-          chmod +x gradlew || true
-          gradle assembleRelease --no-daemon
+          echo "ANDROID_HOME=${ANDROID_HOME}"
+          echo "ANDROID_SDK_ROOT=${ANDROID_SDK_ROOT}"
+          ls "${ANDROID_HOME}/platforms" || true
+
+      - name: Build release
+        run: gradle assembleRelease --no-daemon --stacktrace
 
       - name: Locate APK
         id: apk
         run: |
           APK=$(find app/build/outputs/apk -name "*.apk" | head -n 1)
-          echo "path=$APK" >> "$GITHUB_OUTPUT"
-          echo "name=UthReward-lsposed.apk" >> "$GITHUB_OUTPUT"
-          ls -l "$APK"
-
-      - name: Rename APK
-        run: |
-          cp "${{ steps.apk.outputs.path }}" "UthReward-lsposed.apk"
+          echo "Found: $APK"
+          test -n "$APK"
+          cp "$APK" UthReward-lsposed.apk
+          ls -l UthReward-lsposed.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
