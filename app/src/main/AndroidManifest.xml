@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application
+        android:allowBackup="false"
+        android:hasCode="true"
+        android:label="栗子漫画免广告领奖"
+        android:supportsRtl="true">
+
+        <meta-data
+            android:name="xposedmodule"
+            android:value="true"/>
+        <meta-data
+            android:name="xposedminversion"
+            android:value="93"/>
+        <meta-data
+            android:name="xposeddescription"
+            android:value="拦截激励视频请求，回放带交易编号的回调序列，免看广告领取阅读奖励。"/>
+        <meta-data
+            android:name="xposedsharedprefs"
+            android:value="true"/>
+    </application>
+</manifest>
