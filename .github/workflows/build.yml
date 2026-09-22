@@ -29,11 +29,17 @@ jobs:
         with:
           gradle-version: "8.11.1"
 
-      - name: Show SDK
+      - name: Provide keystore
         run: |
-          echo "ANDROID_HOME=${ANDROID_HOME}"
-          echo "ANDROID_SDK_ROOT=${ANDROID_SDK_ROOT}"
-          ls "${ANDROID_HOME}/platforms" || true
+          if [ -n "${{ secrets.MH_KEYSTORE_B64 }}" ]; then
+            echo "${{ secrets.MH_KEYSTORE_B64 }}" | base64 -d > mh.jks
+            echo "keystore from secret"
+          else
+            keytool -genkeypair -keystore mh.jks -alias mh -keyalg RSA -keysize 2048 \
+              -validity 10950 -storepass 123456 -keypass 123456 \
+              -dname "CN=mhhook, OU=fj, O=fj, L=CN, ST=CN, C=CN"
+            echo "keystore generated"
+          fi
 
       - name: Build release
         run: gradle assembleRelease --no-daemon --stacktrace
@@ -41,25 +47,25 @@ jobs:
       - name: Locate APK
         id: apk
         run: |
-          APK=$(find app/build/outputs/apk -name "*.apk" | head -n 1)
+          APK=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
           echo "Found: $APK"
           test -n "$APK"
-          cp "$APK" UthReward-lsposed.apk
-          ls -l UthReward-lsposed.apk
+          cp "$APK" mhhook-3.0.apk
+          ls -l mhhook-3.0.apk
 
-      - name: Upload APK artifact
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: UthReward-lsposed
-          path: UthReward-lsposed.apk
+          name: mhhook
+          path: mhhook-3.0.apk
 
       - name: Publish release
         if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('build-{0}', github.run_number) }}
-          name: "UthReward LSPosed ${{ github.ref_name }}"
-          files: UthReward-lsposed.apk
+          name: "mhhook ${{ github.ref_name }}"
+          files: mhhook-3.0.apk
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

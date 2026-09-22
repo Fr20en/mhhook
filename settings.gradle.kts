@@ -12,5 +12,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "UthReward"
+rootProject.name = "mhhook"
 include(":app")

@@ -1,9 +1,14 @@
 .gradle/
 build/
 app/build/
+dist/
+out/
+*.apk
+*.idsig
+*.jks
+*.keystore
 local.properties
 .idea/
 *.iml
-*.apk
-!UthReward-lsposed.apk
 .DS_Store
+libs/

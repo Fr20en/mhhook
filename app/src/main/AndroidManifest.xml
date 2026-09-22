@@ -4,7 +4,7 @@
     <application
         android:allowBackup="false"
         android:hasCode="true"
-        android:label="栗子漫画免广告领奖"
+        android:label="mhhook"
         android:supportsRtl="true">
 
         <meta-data
@@ -15,7 +15,7 @@
             android:value="93"/>
         <meta-data
             android:name="xposeddescription"
-            android:value="拦截激励视频请求，回放带交易编号的回调序列，免看广告领取阅读奖励。"/>
+            android:value="mhhook - rewarded video and splash ad bypass for Flutter/TopOn reading apps"/>
         <meta-data
             android:name="xposedsharedprefs"
             android:value="true"/>
