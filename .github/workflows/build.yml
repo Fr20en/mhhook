@@ -29,19 +29,44 @@ jobs:
         with:
           gradle-version: "8.11.1"
 
+      # The release key is kept in the repository secret MH_KEYSTORE_B64 (base64 of
+      # mh.jks). It must match the key used for local builds, otherwise installing a
+      # CI build over a local build fails with INSTALL_FAILED_UPDATE_INCOMPATIBLE.
+      # If the secret is missing or does not decode, a throw-away key is generated so
+      # the pipeline still produces an installable APK.
       - name: Provide keystore
+        env:
+          KS_B64: ${{ secrets.MH_KEYSTORE_B64 }}
+          MH_STORE_PASS: ${{ secrets.MH_STORE_PASS }}
+          MH_KEY_PASS: ${{ secrets.MH_KEY_PASS }}
         run: |
-          if [ -n "${{ secrets.MH_KEYSTORE_B64 }}" ]; then
-            echo "${{ secrets.MH_KEYSTORE_B64 }}" | base64 -d > mh.jks
-            echo "keystore from secret"
-          else
-            keytool -genkeypair -keystore mh.jks -alias mh -keyalg RSA -keysize 2048 \
-              -validity 10950 -storepass 123456 -keypass 123456 \
-              -dname "CN=mhhook, OU=fj, O=fj, L=CN, ST=CN, C=CN"
-            echo "keystore generated"
+          STORE_PASS="${MH_STORE_PASS:-123456}"
+          KEY_PASS="${MH_KEY_PASS:-$STORE_PASS}"
+          ok=0
+          if [ -n "$KS_B64" ]; then
+            printf '%s' "$KS_B64" | base64 -d > mh.jks 2>/dev/null || true
+            if keytool -list -keystore mh.jks -storepass "$STORE_PASS" >/dev/null 2>&1; then
+              echo "keystore: loaded from secret MH_KEYSTORE_B64"
+              ok=1
+            else
+              echo "keystore: secret did not decode into a valid store, generating a temporary key"
+              rm -f mh.jks
+            fi
           fi
+          if [ "$ok" -ne 1 ]; then
+            keytool -genkeypair -keystore mh.jks -alias mh -keyalg RSA -keysize 2048 \
+              -validity 10950 -storepass "$STORE_PASS" -keypass "$KEY_PASS" \
+              -dname "CN=mhhook, OU=fj, O=fj, L=CN, ST=CN, C=CN"
+            echo "keystore: generated temporary key, the APK signature will differ from local builds"
+          fi
+          echo "--- keystore fingerprint ---"
+          keytool -list -v -keystore mh.jks -storepass "$STORE_PASS" | grep -E "^(Alias name| *SHA256):" || true
 
       - name: Build release
+        env:
+          MH_STORE_PASS: ${{ secrets.MH_STORE_PASS }}
+          MH_KEY_ALIAS: ${{ secrets.MH_KEY_ALIAS }}
+          MH_KEY_PASS: ${{ secrets.MH_KEY_PASS }}
         run: gradle assembleRelease --no-daemon --stacktrace
 
       - name: Locate APK
@@ -52,6 +77,15 @@ jobs:
           test -n "$APK"
           cp "$APK" mhhook-3.0.apk
           ls -l mhhook-3.0.apk
+
+      - name: Print APK signer
+        run: |
+          APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -1)
+          if [ -n "$APKSIGNER" ]; then
+            "$APKSIGNER" verify --print-certs mhhook-3.0.apk | grep -E "(DN:|SHA-256 digest)"
+          else
+            echo "apksigner not found, skipped"
+          fi
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
